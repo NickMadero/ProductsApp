@@ -1,0 +1,71 @@
+﻿@page "/products"
+
+@using ProductsApp.data
+@using Microsoft.Extensions.Configuration
+@using System.Text.Json
+@using System.Text
+@using dataLibrary
+@inject HttpClient HttpClient  //Inject HttpClient service
+@inject IConfiguration _config
+@rendermode InteractiveServer
+<!-- products page -->
+<h3>Products</h3>
+
+
+
+@if (products == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    @foreach (var product in products)
+    {
+        <p>
+            @product.product_id @product.product_name
+        </p>
+    }
+}
+<button class="btn btn-primary" @onclick="InsertDataHandler">Insert </button>
+@code {
+    List<ProductModel> products;
+
+    private void InsertDataHandler()
+    {
+        _ = InsertData();
+    }
+    private async Task InsertData()
+    {
+     
+        string data = "{\"product_name\": \"keyboard\"}";
+        var content = new StringContent(data, Encoding.UTF8, "application/json");
+        var response = await HttpClient.PostAsync("http://localhost:5171/api/Product/new", content);
+
+        // Check if the POST request was successful
+        if (response.IsSuccessStatusCode)
+        {
+            // Reload the products after inserting data
+            await LoadProducts();
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+    //    string relativeUri = "/api/Product"; // Ensure the leading slash for a relative URI
+        var response = await HttpClient.GetAsync("http://localhost:5171/api/Product");
+        if (response.IsSuccessStatusCode)
+        {
+              var content = await response.Content.ReadAsStringAsync();
+        products = JsonSerializer.Deserialize<List<ProductModel>>(content, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true 
+        });
+           
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+}
